@@ -36,7 +36,7 @@ class Neuron {
     Value* b = new Value();
 public: 
     Neuron(int nin); 
-    Value* predict(std::vector<Value*> in);
+    Value* predict(std::vector<Value*> in, bool lin = false);
     void zero_grad();
     std::vector<Value*> get_params();
 };
@@ -45,7 +45,7 @@ class Layer {
     std::vector<Neuron> neurons;
 public:
     Layer(int nin, int nout);
-    std::vector<Value*> predict(std::vector<Value*> in);
+    std::vector<Value*> predict(std::vector<Value*> in, bool lin = false);
     void zero_grad();
     std::vector<Value*> get_params();
 };
@@ -54,7 +54,7 @@ class MLP {
     std::vector<Layer> layers;
 public:
     MLP(int nin, std::vector<int> nout);
-    std::vector<Value*> predict(std::vector<float> in);
+    std::vector<Value*> predict(std::vector<float> in, bool lin = false);
     void zero_grad();
     std::vector<Value*> get_params();
     void train(std::vector<std::vector<float>> xs, std::vector<std::vector<float>> ys, int epoch);

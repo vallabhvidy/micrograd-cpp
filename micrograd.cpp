@@ -128,7 +128,7 @@ Neuron::Neuron(int nin) {
     for (auto& weight: w) weight = new Value();
 }
 
-Value* Neuron::predict(vector<Value*> in) {
+Value* Neuron::predict(vector<Value*> in, bool lin) {
     if (in.size() != w.size()) {
         cout << "Input size does not match" << endl;
         return nullptr;
@@ -142,7 +142,7 @@ Value* Neuron::predict(vector<Value*> in) {
         sum = new Value((*sum) + (*mul));
     }
 
-    sum = new Value(tanh(*sum));
+    if (!lin) sum = new Value(tanh(*sum));
 
     return sum;
 }
@@ -151,10 +151,10 @@ Layer::Layer(int nin, int nout) {
     neurons.resize(nout, Neuron(nin));
 }
 
-vector<Value*> Layer::predict(vector<Value*> in) {
+vector<Value*> Layer::predict(vector<Value*> in, bool lin) {
     vector<Value*> act;
     for (Neuron n: neurons) {
-        act.push_back(n.predict(in));
+        act.push_back(n.predict(in, lin));
     }
 
     return act;
@@ -167,12 +167,14 @@ MLP::MLP(int nin, vector<int> nout) {
     }
 }
 
-vector<Value*> MLP::predict(vector<float> in) {
+vector<Value*> MLP::predict(vector<float> in, bool lin) {
     vector<Value*> x;
     for (float i: in) x.push_back(new Value(i));
-    for (Layer layer: layers) {
-        x = layer.predict(x);
+    for (int i = 0; i < layers.size()-1; i++) {
+        x = layers[i].predict(x, lin);
     }
+
+    x = layers.back().predict(x, lin);
 
     return x;
 }
@@ -272,8 +274,20 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
 
         loss->backward();
 
+        float lr = 0.001;
+
+        if (loss->get_data() > 0.01) {
+            lr = 0.01;
+        } else if (loss->get_data() > 0.005) {
+            lr = 0.007;
+        } else if (loss->get_data() > 0.001) {
+            lr = 0.004;
+        } else {
+            lr = 0.002;
+        }
+
         for (Value* p: get_params()) {
-            p->moddata(0.01);
+            p->moddata(0.005);
         }
 
         if ((i+1) % 1000 == 0) cout << loss->get_data() << " " << i+1 << endl;
@@ -284,28 +298,33 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
     
 }
 
+float f(float x) {
+    // modify this function accordingly
+    // and make sure it normalized to [-1, 1]
+    return 2*(float)pow(2, sin(x))-3;
+}
+
 int main() {
-    MLP n(1, {8, 4, 1});
+    // modify the structure of the net here 
+    MLP n(1, {8, 1});
+    
     vector<vector<float>> X;
     vector<vector<float>> Y;
     for (float i = 0; i <= 1; i += 0.1) {
+        // try to predict different mathematical functions
         X.push_back({i});
         // Y.push_back({sin(i)});
         // Y.push_back({(float)log(1 + pow(i, 2))});
-        Y.push_back({sin(i) * cos(i)});
+        Y.push_back({f(i)});
     }
-    n.train(X, Y, 10000);
+    n.train(X, Y, 25000);
+
+    // predict using the mlp.predict method and print the denormalized output
     auto pred = n.predict({0.55});
-    cout << pred[0]->get_data() << endl;
-    // Value d = (a + b) + c;
-    // Value* a = new Value(1.00);
-    // Value* b = new Value(9.00);
-    // Value a = 9.00;
-    // Value b = a * a;
-    // b = b * a;
-    // b.backward(); 
-    // Value* a = new Value(3.00);
-    // train(n, {{1.0}, {2.0}, {4.0}}, {{1.0}, {4.0}, {16.0}}, 10);
+    cout << (pred[0]->get_data()+3) / 2 << endl;
+
+    // manual backward and forward pass for a single iteration
+
     // vector<Value*> y = n.predict({1.0});
     // cout << y[0]->get_data() << endl;
     // Value ye = 1.00;
@@ -318,13 +337,5 @@ int main() {
     // }
     // y = n.predict({1.0});
     // cout << y[0]->get_data() << endl;
-    // int* p;
-    // for (int i = 0; i < 10; i++)
-    // {
-    //     int a = i;
-    //     p = &a;
-    // }
-
-    // cout << *p << endl;
 
 }
