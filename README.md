@@ -11,3 +11,9 @@ float f(float x) {
     return 2*(float)pow(2, sin(x))-3;
 }
 ```
+
+To test modify the above function then compile and run.
+```
+$ g++ -o micrograd micrograd.cpp
+$ ./micrograd
+```

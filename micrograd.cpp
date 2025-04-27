@@ -269,6 +269,7 @@ void Value::moddata(float lr) {
 }
 
 void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
+    cout << "Loss:- " << endl;
     for (int i = 0; i < epoch; i++) {
         vector<Value*> deletes;
         Value* loss = new Value(0.00);
@@ -289,28 +290,29 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
 
         loss->backward();
 
-        float lr = 0.001;
+        // try different learning rate strategies
 
-        if (loss->get_data() > 0.01) {
-            lr = 0.01;
-        } else if (loss->get_data() > 0.005) {
-            lr = 0.007;
-        } else if (loss->get_data() > 0.001) {
-            lr = 0.004;
-        } else {
-            lr = 0.002;
-        }
+        float lr = 0.005;
+
+        // if (loss->get_data() > 0.01) {
+        //     lr = 0.01;
+        // } else if (loss->get_data() > 0.005) {
+        //     lr = 0.007;
+        // } else if (loss->get_data() > 0.001) {
+        //     lr = 0.004;
+        // } else {
+        //     lr = 0.002;
+        // }
 
         for (Value* p: get_params()) {
-            p->moddata(0.01);
+            p->moddata(lr); // modify learning rate here
         }
 
-        if ((i+1) % 1000 == 0) cout << loss->get_data() << " " << i+1 << endl;
+        if ((i+1) % 1000 == 0) cout << i+1 << ". " << loss->get_data() << endl;
 
         for (auto ptr: deletes) delete ptr;
     }
 
-    
 }
 
 float f(float x) {
@@ -321,7 +323,7 @@ float f(float x) {
 
 int main() {
     // modify the structure of the net here 
-    MLP n(1, {16, 8, 1});
+    MLP n(1, {8, 1});
     
     vector<vector<float>> X;
     vector<vector<float>> Y;
@@ -332,11 +334,13 @@ int main() {
         // Y.push_back({(float)log(1 + pow(i, 2))});
         Y.push_back({f(i)});
     }
+
+    // args:- input, output, epochs
     n.train(X, Y, 25000);
 
     // predict using the mlp.predict method and print the denormalized output
     auto pred = n.predict({0.55});
-    cout << (pred[0]->get_data()+3) / 2 << endl;
+    cout << "Predicted output:- " << (pred[0]->get_data()+3) / 2 << endl;
 
     // backward and forward pass for a single iteration
 
