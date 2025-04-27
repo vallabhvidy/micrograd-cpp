@@ -24,6 +24,8 @@ public:
     friend Value operator/(Value& a, Value& b);
     friend Value operator^(Value& a, int b);
     friend Value relu(Value& a);
+    friend Value sqrdiff(Value& a, Value& b);
+    friend void operator+=(Value& a, Value& b);
     void _backward();
     void backward();
     void build_topo(Value* v, std::vector<Value*>& topo, std::set<Value*>& visited);

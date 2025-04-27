@@ -84,6 +84,17 @@ Value relu(Value& a) {
     return c;
 }
 
+Value sqrdiff(Value& a, Value& b) {
+    Value c((float)pow((a.data - b.data), 2), {&a, &b}, 's');
+    return c;
+}
+
+void operator+=(Value& a, Value& b) {
+    a.op = 'p';
+    a.data += b.data;
+    a.prev.push_back(&b);
+}
+
 // Value operator/(float a, Value& b) {
 //     Value c(a);
 //     return (c / b);
@@ -243,6 +254,13 @@ void Value::_backward() {
         prev[0]->grad += power * (pow(prev[0]->data, power-1)) * grad;
     } else if (op == 'r') {
         prev[0]->grad += (prev[0]->data > 0 ? 1 : 0.01) * grad;
+    } else if (op == 's') {
+        prev[0]->grad += 2 * (prev[0]->data - prev[1]->data) * grad;
+        prev[1]->grad -= 2 * (prev[0]->data - prev[1]->data) * grad;
+    } else if (op == 'p') {
+        for (auto& p: prev) {
+            p->grad += grad;
+        } 
     }
 }
 
@@ -254,19 +272,16 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
     for (int i = 0; i < epoch; i++) {
         vector<Value*> deletes;
         Value* loss = new Value(0.00);
+        deletes.push_back(loss);
         vector<Value*> ypred;
         for (int j = 0; j < ys.size(); j++) {
             ypred = predict(xs[j]);
             deletes.insert(deletes.end(), ypred.begin(), ypred.end());
             for (int k = 0; k < ypred.size(); k++) {
                 Value* y = new Value(ys[j][k]);
-                Value* diff = new Value(*y - *ypred[k]);
-                Value* sqr = new Value(*diff ^ 2);
-                loss = new Value(*loss + *sqr);
-                deletes.push_back(y);
-                deletes.push_back(diff);
-                deletes.push_back(sqr);
-                deletes.push_back(loss);
+                Value* sdiff = new Value(sqrdiff(*ypred[k], *y));
+                *loss += *sdiff;
+                deletes.push_back(sdiff);
             }
         }
 
@@ -287,7 +302,7 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
         }
 
         for (Value* p: get_params()) {
-            p->moddata(0.005);
+            p->moddata(0.01);
         }
 
         if ((i+1) % 1000 == 0) cout << loss->get_data() << " " << i+1 << endl;
@@ -306,7 +321,7 @@ float f(float x) {
 
 int main() {
     // modify the structure of the net here 
-    MLP n(1, {8, 1});
+    MLP n(1, {16, 8, 1});
     
     vector<vector<float>> X;
     vector<vector<float>> Y;
@@ -323,7 +338,7 @@ int main() {
     auto pred = n.predict({0.55});
     cout << (pred[0]->get_data()+3) / 2 << endl;
 
-    // manual backward and forward pass for a single iteration
+    // backward and forward pass for a single iteration
 
     // vector<Value*> y = n.predict({1.0});
     // cout << y[0]->get_data() << endl;
