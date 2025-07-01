@@ -314,7 +314,7 @@ vector<Value *> MLP::predict(vector<float> in)
 void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch)
 {
     cout << "Loss:- " << endl;
-    float lr = 0.0001;
+    float lr = 0.003;
     float prev = 0;
     for (int i = 0; i < epoch; i++)
     {
@@ -335,6 +335,7 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch)
 
         loss->backward();
 
+        // implement your training strategy here
         if (loss->get_data() > prev)
             lr /= 1.00001;
 
@@ -379,37 +380,32 @@ int main()
 
     vector<vector<float>> X, Y;
 
-    X = {
-        {0.0},
-        {0.1},
-        {0.2},
-        {0.3},
-        {0.4},
-        {0.5},
-        {0.6},
-        {0.7},
-        {0.8},
-        {0.9},
-        {1.0},
-    };
-    Y = {
-        {0.000},
-        {1.400},
-        {1.979},
-        {2.425},
-        {2.798},
-        {3.132},
-        {3.431},
-        {3.708},
-        {3.966},
-        {4.208},
-        {4.427},
-    };
-
-    for (auto &y : Y)
-    {
-        y[0] = norm(y[0]);
-    }
+    // X = {
+    //     {0.0},
+    //     {0.1},
+    //     {0.2},
+    //     {0.3},
+    //     {0.4},
+    //     {0.5},
+    //     {0.6},
+    //     {0.7},
+    //     {0.8},
+    //     {0.9},
+    //     {1.0},
+    // };
+    // Y = {
+    //     {0.000},
+    //     {1.400},
+    //     {1.979},
+    //     {2.425},
+    //     {2.798},
+    //     {3.132},
+    //     {3.431},
+    //     {3.708},
+    //     {3.966},
+    //     {4.208},
+    //     {4.427},
+    // };
 
     for (float i = 0; i <= 1; i += 0.1)
     {
@@ -420,12 +416,29 @@ int main()
         Y.push_back({f(i)});
     }
 
+    for (auto &x : X)
+    {
+        for (auto &i : x)
+        {
+            i = norm(i);
+        }
+    }
+
+    for (auto &y : Y)
+    {
+        for (auto &i : y)
+        {
+            i = norm(i);
+        }
+    }
+
     // args:- input, output, epochs
-    n.train(X, Y, 100000);
+    n.train(X, Y, 10000);
 
     // predict using the mlp.predict method and print the denormalized output
     auto pred = n.predict({3.1415 / 4});
-    cout << "Predicted output:- " << denorm(pred[0]->get_data()) << endl;
+    float data = denorm(pred[0]->get_data());
+    cout << "Predicted output:- " << data << endl;
 
     return 0;
 }
