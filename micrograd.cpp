@@ -4,285 +4,330 @@
 #include <set>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 using namespace std;
 
-Value::Value(float _data, vector<Value*> children, char _op) {
+Value::Value(float _data, vector<Value *> children, char _op, bool _temp)
+{
     data = _data;
     prev = children;
     op = _op;
     grad = 0;
+    temp = _temp;
 }
 
-float Value::get_data() {
-    return data;
-}
+float Value::get_data() { return data; }
 
-Value operator+(Value& a, Value& b) {
-    Value c(a.data + b.data, {&a, &b}, '+');
+float Value::get_grad() { return grad; }
+
+Value *operator+(const Value &a, const Value &b)
+{
+    Value *c = new Value(a.data + b.data, {(Value *)&a, (Value *)&b}, '+');
     return c;
 }
 
-// Value operator+(float a, Value& b) {
-//     Value c(a);
-//     return (c + b);
-// }
-
-// Value operator+(Value& a, float b) {
-//     Value c(b);
-//     return (c + a);
-// }
-
-Value operator*(Value& a, Value& b) {
-    Value c(a.data * b.data, {&a, &b}, '*');
+Value *operator*(const Value &a, const Value &b)
+{
+    Value *c = new Value(a.data * b.data, {(Value *)&a, (Value *)&b}, '*');
     return c;
 }
 
-// Value operator*(float a, Value& b) {
-//     Value c(a);
-//     return (c * b);
-// }
-
-// Value operator*(Value& a, float b) {
-//     Value c(b);
-//     return (c * a);
-// }
-
-Value tanh(Value& a) {
+Value *tanh(const Value &a)
+{
     float n = (exp(a.data) - exp(-a.data)) / (exp(a.data) + exp(-a.data));
-    Value c(n, {&a}, 't');
+    Value *c = new Value(n, {(Value *)&a}, 't');
     return c;
 }
 
-Value exp(Value& a) {
+Value *exp(const Value &a)
+{
     float n = exp(a.data);
-    Value c(n, {&a}, 'e');
+    Value *c = new Value(n, {(Value *)&a}, 'e');
     return c;
 }
 
-Value operator-(Value& a, Value& b) {
-    Value c(a.data - b.data, {&a, &b}, '-');
+Value *operator-(const Value &a, const Value &b)
+{
+    Value *c = new Value(a.data - b.data, {(Value *)&a, (Value *)&b}, '-');
     return c;
 }
 
-// Value operator-(float a, Value& b) {
-//     Value c(a);
-//     return (c - b);
-// }
-
-// Value operator-(Value& a, float b) {
-//     Value c(b);
-//     return (a - c);
-// }
-
-Value operator/(Value& a, Value& b) {
-    Value c(a.data / b.data, {&a, &b}, '/');
+Value *operator/(const Value &a, const Value &b)
+{
+    Value *c = new Value(a.data / b.data, {(Value *)&a, (Value *)&b}, '/');
     return c;
 }
 
-Value relu(Value& a) {
-    Value c((a.data > 0 ? a.data : 0.01 * a.data), {&a}, 'r');
+Value *relu(const Value &a)
+{
+    Value *c = new Value((a.data > 0 ? a.data : 0.01 * a.data), {(Value *)&a}, 'r');
     return c;
 }
 
-Value sqrdiff(Value& a, Value& b) {
-    Value c((float)pow((a.data - b.data), 2), {&a, &b}, 's');
+Value *sqrdiff(const Value &a, const Value &b)
+{
+    Value *c = new Value((float)pow((a.data - b.data), 2), {(Value *)&a, (Value *)&b}, 's');
     return c;
 }
 
-void operator+=(Value& a, Value& b) {
+void operator+=(Value &a, const Value &b)
+{
     a.op = 'p';
     a.data += b.data;
-    a.prev.push_back(&b);
+    a.prev.push_back((Value *)&b);
 }
 
-// Value operator/(float a, Value& b) {
-//     Value c(a);
-//     return (c / b);
-// }
+Value *operator^(Value &a, const int b)
+{
+    Value *c = new Value(pow(a.data, b), {(Value *)&a}, '^');
+    c->power = b;
+    return c;
+}
 
-// Value operator/(Value& a, float b) {
-//     Value c(b);
-//     return (a / c);
-// }
+void Value::moddata(float lr)
+{
+    data += ((-lr) * grad);
+}
 
-void Value::backward() {
-    vector<Value*> topo;
-    set<Value*> visited;
+void Value::_backward()
+{
+    if (op == '+')
+    {
+        prev[0]->grad += grad;
+        prev[1]->grad += grad;
+    }
+    else if (op == '*')
+    {
+        prev[0]->grad += prev[1]->data * grad;
+        prev[1]->grad += prev[0]->data * grad;
+    }
+    else if (op == 't')
+    {
+        prev[0]->grad += (1 - data * data) * grad;
+    }
+    else if (op == 'e')
+    {
+        prev[0]->grad += (data * grad);
+    }
+    else if (op == '/')
+    {
+        prev[0]->grad += grad / prev[1]->data;
+        prev[1]->grad += (-grad * prev[0]->data) / (prev[1]->data * prev[1]->data);
+    }
+    else if (op == '-')
+    {
+        prev[0]->grad += grad;
+        prev[1]->grad += -grad;
+    }
+    else if (op == '^')
+    {
+        prev[0]->grad += power * (pow(prev[0]->data, power - 1)) * grad;
+    }
+    else if (op == 'r')
+    {
+        prev[0]->grad += (prev[0]->data > 0 ? 1 : 0.01) * grad;
+    }
+    else if (op == 's')
+    {
+        prev[0]->grad += 2 * (prev[0]->data - prev[1]->data) * grad;
+        prev[1]->grad -= 2 * (prev[0]->data - prev[1]->data) * grad;
+    }
+    else if (op == 'p')
+    {
+        for (auto &p : prev)
+        {
+            p->grad += grad;
+        }
+    }
+}
+
+void Value::backward()
+{
+    vector<Value *> topo;
+    unordered_set<Value *> visited;
 
     build_topo(this, topo, visited);
 
     grad = 1;
 
-    for (int i = topo.size()-1; i >= 0; i--) {
+    for (int i = topo.size() - 1; i >= 0; i--)
         topo[i]->_backward();
-    }
 }
 
-void Value::build_topo(Value* v, vector<Value*>& topo, set<Value*>& visited) {
-    if (v == nullptr) return;
-    if (visited.find(v) == visited.end()) {
+void Value::build_topo(Value *v, vector<Value *> &topo, unordered_set<Value *> &visited)
+{
+    if (v == nullptr)
+        return;
+
+    if (visited.find(v) == visited.end())
+    {
         visited.insert(v);
-        // cout << v->data << endl;
-        for (Value* child: v->prev) {
+
+        for (Value *child : v->prev)
             build_topo(child, topo, visited);
-        }
+
         topo.push_back(v);
     }
 }
 
-void Value::zero_grad() {
+void Value::zero_grad()
+{
     grad = 0;
 }
 
-Neuron::Neuron(int nin) {
-    w = vector<Value*>(nin);
-    for (auto& weight: w) weight = new Value();
+void Value::deleteChildren()
+{
+    unordered_set<Value *> visited;
+    deleteChildren(this, visited);
 }
 
-Value* Neuron::predict(vector<Value*> in, bool lin) {
-    if (in.size() != w.size()) {
-        cout << "Input size does not match" << endl;
-        return nullptr;
+void Value::deleteChildren(Value *ptr, unordered_set<Value *> &visited)
+{
+    for (auto child : ptr->prev)
+    {
+        if (visited.find(child) == visited.end() && child->temp)
+        {
+            visited.insert(child);
+            deleteChildren(child, visited);
+            delete child;
+        }
     }
-    Value* sum = new Value(0);
-    sum = new Value(*sum + *b);
-    auto k = w;
-    for (int i = 0; i < w.size(); i++) {
-        Value* val = in[i];
-        Value* mul = new Value((*w[i]) * (*val));
-        sum = new Value((*sum) + (*mul));
-    }
-
-    if (!lin) sum = new Value(tanh(*sum));
-
-    return sum;
 }
 
-Layer::Layer(int nin, int nout) {
+Neuron::Neuron(int nin)
+{
+    w = vector<Value *>(nin);
+    b = new Value();
+    b->temp = false;
+    for (auto &weight : w)
+    {
+        weight = new Value();
+        weight->temp = false;
+    }
+}
+
+Layer::Layer(int nin, int nout)
+{
     neurons.resize(nout, Neuron(nin));
 }
 
-vector<Value*> Layer::predict(vector<Value*> in, bool lin) {
-    vector<Value*> act;
-    for (Neuron n: neurons) {
-        act.push_back(n.predict(in, lin));
-    }
-
-    return act;
-}
-
-MLP::MLP(int nin, vector<int> nout) {
+MLP::MLP(int nin, vector<int> nout)
+{
     layers.push_back(Layer(nin, nout[0]));
-    for (int i = 0; i < nout.size()-1; i++) {
-        layers.push_back(Layer(nout[i], nout[i+1]));
-    }
+    for (int i = 0; i < nout.size() - 1; i++)
+        layers.push_back(Layer(nout[i], nout[i + 1]));
 }
 
-vector<Value*> MLP::predict(vector<float> in, bool lin) {
-    vector<Value*> x;
-    for (float i: in) x.push_back(new Value(i));
-    for (int i = 0; i < layers.size()-1; i++) {
-        x = layers[i].predict(x, lin);
-    }
-
-    x = layers.back().predict(x, lin);
-
-    return x;
-}
-
-void Neuron::zero_grad() {
-    for (Value* weight: w) weight->zero_grad();
-    b->zero_grad();
-}
-
-void Layer::zero_grad() {
-    for (Neuron n: neurons) n.zero_grad();
-}
-
-void MLP::zero_grad() {
-    for (Layer l: layers) l.zero_grad();
-}
-
-vector<Value*> Neuron::get_params() {
-    vector<Value*> params = w;
+vector<Value *> Neuron::get_params()
+{
+    vector<Value *> params = w;
     params.push_back(b);
     return params;
 }
 
-vector<Value*> Layer::get_params() {
-    vector<Value*> params;
-    for (Neuron n: neurons) {
-        vector<Value*> n_params = n.get_params();
+vector<Value *> Layer::get_params()
+{
+    vector<Value *> params;
+    for (Neuron &n : neurons)
+    {
+        vector<Value *> n_params = n.get_params();
         params.insert(params.end(), n_params.begin(), n_params.end());
     }
     return params;
 }
 
-Value operator^(Value& a, int b) {
-    Value c(pow(a.data, b), {&a}, '^');
-    c.power = b;
-    return c;
-}
-
-vector<Value*> MLP::get_params() {
-    vector<Value*> params;
-    for (Layer l: layers) {
-        vector<Value*> l_params = l.get_params();
+vector<Value *> MLP::get_params()
+{
+    vector<Value *> params;
+    for (Layer &l : layers)
+    {
+        vector<Value *> l_params = l.get_params();
         params.insert(params.end(), l_params.begin(), l_params.end());
     }
     return params;
 }
 
-void Value::_backward() {
-    if (op == '+') {
-        prev[0]->grad += grad;
-        prev[1]->grad += grad;
-    } else if (op == '*') {
-        prev[0]->grad += prev[1]->data * grad;
-        prev[1]->grad += prev[0]->data * grad;
-    } else if (op == 't') {
-        prev[0]->grad += (1 - data * data) * grad;
-    } else if (op == 'e') {
-        prev[0]->grad += (data * grad);
-    } else if (op == '/') {
-        prev[0]->grad += grad / prev[1]->data;
-        prev[1]->grad += (-grad * prev[0]->data) / (prev[1]->data * prev[1]->data);
-    } else if (op == '-') {
-        prev[0]->grad += grad;
-        prev[1]->grad += -grad;
-    } else if (op == '^') {
-        prev[0]->grad += power * (pow(prev[0]->data, power-1)) * grad;
-    } else if (op == 'r') {
-        prev[0]->grad += (prev[0]->data > 0 ? 1 : 0.01) * grad;
-    } else if (op == 's') {
-        prev[0]->grad += 2 * (prev[0]->data - prev[1]->data) * grad;
-        prev[1]->grad -= 2 * (prev[0]->data - prev[1]->data) * grad;
-    } else if (op == 'p') {
-        for (auto& p: prev) {
-            p->grad += grad;
-        } 
+void Neuron::zero_grad()
+{
+    for (Value *weight : w)
+        weight->zero_grad();
+    b->zero_grad();
+}
+
+void Layer::zero_grad()
+{
+    for (Neuron &n : neurons)
+        n.zero_grad();
+}
+
+void MLP::zero_grad()
+{
+    for (Layer &l : layers)
+        l.zero_grad();
+}
+
+Value *Neuron::predict(vector<Value *> in, bool lin)
+{
+    if (in.size() != w.size())
+    {
+        cout << "Input size does not match" << endl;
+        return nullptr;
     }
+    Value *sum = new Value(0);
+    *sum += *b;
+    auto k = w;
+    for (int i = 0; i < w.size(); i++)
+    {
+        Value *val = in[i];
+        Value *mul = (*w[i]) * (*val);
+        *sum += *mul;
+    }
+
+    if (!lin)
+        sum = tanh(*sum);
+
+    return sum;
 }
 
-void Value::moddata(float lr) {
-    data += ((-lr) * grad);
+vector<Value *> Layer::predict(vector<Value *> in, bool lin)
+{
+    vector<Value *> act;
+    for (Neuron n : neurons)
+        act.push_back(n.predict(in, lin));
+
+    return act;
 }
 
-void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
+vector<Value *> MLP::predict(vector<float> in)
+{
+    vector<Value *> x;
+    for (float i : in)
+        x.push_back(new Value(i));
+    for (int i = 0; i < layers.size() - 1; i++)
+        x = layers[i].predict(x);
+
+    x = layers.back().predict(x, true);
+
+    return x;
+}
+
+void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch)
+{
     cout << "Loss:- " << endl;
-    for (int i = 0; i < epoch; i++) {
-        vector<Value*> deletes;
-        Value* loss = new Value(0.00);
-        deletes.push_back(loss);
-        vector<Value*> ypred;
-        for (int j = 0; j < ys.size(); j++) {
+    float lr = 0.0001;
+    float prev = 0;
+    for (int i = 0; i < epoch; i++)
+    {
+        Value *loss = new Value(0.00);
+        vector<Value *> ypred;
+        for (int j = 0; j < ys.size(); j++)
+        {
             ypred = predict(xs[j]);
-            deletes.insert(deletes.end(), ypred.begin(), ypred.end());
-            for (int k = 0; k < ypred.size(); k++) {
-                Value* y = new Value(ys[j][k]);
-                Value* sdiff = new Value(sqrdiff(*ypred[k], *y));
+            for (int k = 0; k < ypred.size(); k++)
+            {
+                Value *y = new Value(ys[j][k]);
+                Value *sdiff = sqrdiff(*ypred[k], *y);
                 *loss += *sdiff;
-                deletes.push_back(sdiff);
             }
         }
 
@@ -290,44 +335,84 @@ void MLP::train(vector<vector<float>> xs, vector<vector<float>> ys, int epoch) {
 
         loss->backward();
 
-        // try different learning rate strategies
+        if (loss->get_data() > prev)
+            lr /= 1.00001;
 
-        float lr = 0.005;
-
-        // if (loss->get_data() > 0.01) {
-        //     lr = 0.01;
-        // } else if (loss->get_data() > 0.005) {
-        //     lr = 0.007;
-        // } else if (loss->get_data() > 0.001) {
-        //     lr = 0.004;
-        // } else {
-        //     lr = 0.002;
-        // }
-
-        for (Value* p: get_params()) {
+        for (Value *p : get_params())
             p->moddata(lr); // modify learning rate here
-        }
 
-        if ((i+1) % 1000 == 0) cout << i+1 << ". " << loss->get_data() << endl;
+        if ((i + 1) % 1000 == 0)
+            cout << i + 1 << ". " << loss->get_data() << " " << lr << endl;
 
-        for (auto ptr: deletes) delete ptr;
+        prev = lr;
+
+        loss->deleteChildren();
+        delete loss;
+    }
+}
+
+float norm(float x)
+{
+    return x;
+}
+
+float denorm(float x)
+{
+    return x;
+}
+
+float f(float x)
+{
+    // modify this function accordingly
+    // note:- if the function is normalized
+    // the model may train better
+    // so try to normalize the data
+    // to [-1, 1] and dont forget to
+    // denormalize the output
+    return tan(x);
+}
+
+int main()
+{
+    // modify the structure of the net here
+    MLP n(1, {8, 8, 1});
+
+    vector<vector<float>> X, Y;
+
+    X = {
+        {0.0},
+        {0.1},
+        {0.2},
+        {0.3},
+        {0.4},
+        {0.5},
+        {0.6},
+        {0.7},
+        {0.8},
+        {0.9},
+        {1.0},
+    };
+    Y = {
+        {0.000},
+        {1.400},
+        {1.979},
+        {2.425},
+        {2.798},
+        {3.132},
+        {3.431},
+        {3.708},
+        {3.966},
+        {4.208},
+        {4.427},
+    };
+
+    for (auto &y : Y)
+    {
+        y[0] = norm(y[0]);
     }
 
-}
-
-float f(float x) {
-    // modify this function accordingly
-    // and make sure it normalized to [-1, 1]
-    return 2*(float)pow(2, sin(x))-3;
-}
-
-int main() {
-    // modify the structure of the net here 
-    MLP n(1, {8, 1});
-    
-    vector<vector<float>> X;
-    vector<vector<float>> Y;
-    for (float i = 0; i <= 1; i += 0.1) {
+    for (float i = 0; i <= 1; i += 0.1)
+    {
         // try to predict different mathematical functions
         X.push_back({i});
         // Y.push_back({sin(i)});
@@ -336,25 +421,11 @@ int main() {
     }
 
     // args:- input, output, epochs
-    n.train(X, Y, 25000);
+    n.train(X, Y, 100000);
 
     // predict using the mlp.predict method and print the denormalized output
-    auto pred = n.predict({0.55});
-    cout << "Predicted output:- " << (pred[0]->get_data()+3) / 2 << endl;
+    auto pred = n.predict({3.1415 / 4});
+    cout << "Predicted output:- " << denorm(pred[0]->get_data()) << endl;
 
-    // backward and forward pass for a single iteration
-
-    // vector<Value*> y = n.predict({1.0});
-    // cout << y[0]->get_data() << endl;
-    // Value ye = 1.00;
-    // Value diff = *y[0] - ye;
-    // Value loss = diff ^ 2;
-    // loss.backward();
-    // vector<Value*> params = n.get_params();
-    // for (Value* p: n.get_params()) {
-    //     p->moddata(0.01);
-    // }
-    // y = n.predict({1.0});
-    // cout << y[0]->get_data() << endl;
-
+    return 0;
 }
