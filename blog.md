@@ -22,7 +22,7 @@ One way to achieve this to figure out the formula of gravity like Newton did but
 
 Now micrograd comes into picture. You just need to give the heights and the corresponding speeds to it and it will adjust its internals in such a way that if you give it a new height it will give you a nice approximation of the speed that the object will have if droppend from this height.
 
-How does this black box work? well maybe i will explain it in a seperate article...
+How does this black box work? Andrej has explained it really well in his [video](https://youtu.be/VMj-3S1tku0?si=uBu_I0qe94eTsD0F).
 
 
 ## How to use micrograd-cpp?
@@ -116,7 +116,7 @@ After the model is trained new predictions can be made using the `predict` metho
 ```
 // predict using the mlp.predict method and print the denormalized output
 
-auto pred = n.predict({3.1415 / 4});
+auto pred = n.predict({0.7853});
 float data = denorm(pred[0]->get_data());
 
 cout << "Predicted output:- " << data << endl;
@@ -133,3 +133,22 @@ if (loss->get_data() > prev)
 ```
 
 The strategy in the example reduces the learning rate by a tiny amount whenever the current loss is greater than the previous loss.
+
+Sample training log for mapping to tan(x),
+
+```
+Loss:-
+1000. 0.0233211 0.00297013
+2000. 0.0159674 0.00294059
+3000. 0.0143376 0.00291134
+4000. 0.0138478 0.00288237
+5000. 0.0135425 0.00285367
+6000. 0.0130001 0.00282529
+7000. 0.0126426 0.00279718
+8000. 0.0122939 0.00276935
+9000. 0.0119804 0.00274179
+10000. 0.0116916 0.0027145
+Predicted output:- 1.04824
+```
+
+Here the value we are predicting for is 0.7853 which is nearly equal to π/4 whose tangent is equal to 1. Hence the predicted value of our model 1.048 is close to the actual value. This prediction can be improved by applying a better learning rate strategy or changing the structure of the MLP or training the MLP for greater number of epochs.

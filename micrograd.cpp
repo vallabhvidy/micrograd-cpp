@@ -436,7 +436,7 @@ int main()
     n.train(X, Y, 10000);
 
     // predict using the mlp.predict method and print the denormalized output
-    auto pred = n.predict({3.1415 / 4});
+    auto pred = n.predict({0.7853});
     float data = denorm(pred[0]->get_data());
     cout << "Predicted output:- " << data << endl;
 
