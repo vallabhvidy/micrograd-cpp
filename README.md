@@ -12,7 +12,7 @@ float f(float x) {
 }
 ```
 
-To test modify the above function then compile and run.
+To test, modify the above function then compile and run.
 ```
 $ g++ -o micrograd micrograd.cpp
 $ ./micrograd
