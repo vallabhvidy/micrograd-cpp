@@ -66,7 +66,13 @@ Value *relu(const Value &a)
 
 Value *sqrdiff(const Value &a, const Value &b)
 {
-    Value *c = new Value((float)pow((a.data - b.data), 2), {(Value *)&a, (Value *)&b}, 's');
+    Value *c = new Value((float)pow((a.data - b.data), 2), {(Value *)&a, (Value *)&b}, 'q');
+    return c;
+}
+
+Value *sin(const Value &a)
+{
+    Value *c = new Value(sin(a.data), {(Value *)&a}, 's');
     return c;
 }
 
@@ -127,10 +133,14 @@ void Value::_backward()
     {
         prev[0]->grad += (prev[0]->data > 0 ? 1 : 0.01) * grad;
     }
-    else if (op == 's')
+    else if (op == 'q')
     {
         prev[0]->grad += 2 * (prev[0]->data - prev[1]->data) * grad;
         prev[1]->grad -= 2 * (prev[0]->data - prev[1]->data) * grad;
+    }
+    else if (op == 's')
+    {
+        prev[0]->grad += cos(prev[0]->data) * grad;
     }
     else if (op == 'p')
     {
@@ -284,7 +294,7 @@ Value *Neuron::predict(vector<Value *> in, bool lin)
     }
 
     if (!lin)
-        sum = tanh(*sum);
+        sum = sin(*sum);
 
     return sum;
 }
@@ -407,7 +417,7 @@ int main()
     //     {4.427},
     // };
 
-    for (float i = 0; i <= 1; i += 0.1)
+    for (float i = 0; i <= 2; i += 0.1)
     {
         // try to predict different mathematical functions
         X.push_back({i});
@@ -433,7 +443,7 @@ int main()
     }
 
     // args:- input, output, epochs
-    n.train(X, Y, 10000);
+    n.train(X, Y, 20000);
 
     // predict using the mlp.predict method and print the denormalized output
     auto pred = n.predict({0.7853});

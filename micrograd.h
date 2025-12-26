@@ -32,6 +32,7 @@ public:
     friend Value *operator^(Value &a, const int b);
     friend Value *relu(const Value &a);
     friend Value *sqrdiff(const Value &a, const Value &b);
+    friend Value *sin(const Value &a);
     friend void operator+=(Value &a, const Value &b);
     void _backward();
     void backward();
