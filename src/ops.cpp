@@ -1,0 +1,138 @@
+#include "../include/ops.hpp"
+#include <cmath>
+
+Val operator+(Val a, Val b)
+{   
+    Val c = make_val(a->data + b->data, {a, b}, '+');
+    WVal wa = a, wb = b, wc = c;
+    std::function<void()> _backward = [wa, wb, wc] () {
+        Val a = wa.lock();
+        Val b = wb.lock();
+        Val c = wc.lock();
+        if (!a || !b || !c) return;
+        a->grad += c->grad;
+        b->grad += c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val operator*(Val a, Val b)
+{
+    Val c = make_val(a->data * b->data, {a, b}, '*');
+    WVal wa = a, wb = b, wc = c;
+    std::function<void()> _backward = [wa, wb, wc] () {
+        Val a = wa.lock();
+        Val b = wb.lock();
+        Val c = wc.lock();
+        if (!a || !b || !c) return;
+        a->grad += b->data * c->grad;
+        b->grad += a->data * c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val operator-(Val a, Val b)
+{
+    Val c = make_val(a->data - b->data, {a, b}, '-');
+    WVal wa = a, wb = b, wc = c;
+    std::function<void()> _backward = [wa, wb, wc] () {
+        Val a = wa.lock();
+        Val b = wb.lock();
+        Val c = wc.lock();
+        if (!a || !b || !c) return;
+        a->grad += c->grad;
+        b->grad -= c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val operator/(Val a, Val b)
+{
+    Val c = make_val(a->data / b->data, {a, b}, '/');
+    WVal wa = a, wb = b, wc = c;
+    std::function<void()> _backward = [wa, wb, wc] () {
+        Val a = wa.lock();
+        Val b = wb.lock();
+        Val c = wc.lock();
+        if (!a || !b || !c) return;
+        a->grad += c->grad / b->data;
+        b->grad += (-c->grad * a->data) / (b->data * b->data);
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val sqrdiff(Val a, Val b)
+{
+    Val c = make_val((float)pow((a->data - b->data), 2), {a, b}, 'q');
+    WVal wa = a, wb = b, wc = c;
+    std::function<void()> _backward = [wa, wb, wc] () {
+        Val a = wa.lock();
+        Val b = wb.lock();
+        Val c = wc.lock();
+        if (!a || !b || !c) return;
+        a->grad += 2 * (a->data - b->data) * c->grad;
+        b->grad -= 2 * (a->data - b->data) * c->grad; 
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val relu(Val a)
+{
+    Val c = make_val((a->data > 0 ? a->data : 0.01 * a->data), {a}, 'r');
+    WVal wa = a, wc = c;
+    std::function<void()> _backward = [wa, wc] () {
+        Val a = wa.lock();
+        Val c = wc.lock();
+        if (!a || !c) return;
+        a->grad += (a->data > 0 ? 1 : 0.01) * c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val tanh(Val a)
+{
+    Val c = make_val(std::tanh(a->data), {a}, 't');
+    WVal wa = a, wc = c;
+    std::function<void()> _backward = [wa, wc] () {
+        Val a = wa.lock();
+        Val c = wc.lock();
+        if (!a || !c) return;
+        a->grad += (1 - c->data * c->data) * c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val exp(Val a)
+{
+    Val c = make_val(std::exp(a->data), {a}, 'e');
+    WVal wa = a, wc = c;
+    std::function<void()> _backward = [wa, wc] () {
+        Val a = wa.lock();
+        Val c = wc.lock();
+        if (!a || !c) return;
+        a->grad += c->data * c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
+
+Val sin(Val a)
+{
+    Val c = make_val(sin(a->data), {a}, 's');
+    WVal wa = a, wc = c;
+    std::function<void()> _backward = [wa, wc] () {
+        Val a = wa.lock();
+        Val c = wc.lock();
+        if (!a || !c) return;
+        a->grad += std::cos(a->data) * c->grad;
+    };
+    c->_backward = _backward;
+    return c;
+}
