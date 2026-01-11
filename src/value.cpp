@@ -33,8 +33,6 @@ void Value::backward()
 
 void Value::build_topo(Val v, vector<Val> &topo, unordered_set<Value*> &visited)
 {
-    // Val v = vweak.lock();
-
     if (v == nullptr)
         return;
 
@@ -51,5 +49,13 @@ void Value::build_topo(Val v, vector<Val> &topo, unordered_set<Value*> &visited)
 
 void Value::zero_grad()
 {
-    grad = 0;
+    vector<Val> topo;
+    unordered_set<Value*> visited;
+
+    build_topo(shared_from_this(), topo, visited);
+
+    grad = 1;
+
+    for (int i = topo.size() - 1; i >= 0; i--)
+        topo[i]->grad = 0;
 }

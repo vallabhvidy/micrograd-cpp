@@ -12,6 +12,7 @@ lib = library(
         'src/value.cpp',
         'src/ops.cpp',
         'src/nn.cpp',
+        'src/normalizer.cpp'
     ],
     include_directories : inc,
 )
