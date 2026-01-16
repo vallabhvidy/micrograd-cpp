@@ -1,6 +1,5 @@
 #include "include/nn.hpp"
 #include "include/normalizer.hpp"
-#include "include/activation.hpp"
 #include <iostream>
 #include <cmath>
 using namespace std;
@@ -26,7 +25,7 @@ int main()
 
     vector<vector<double>> X, Y;
 
-    for (float i = -3; i <= 3; i += 0.1)
+    for (float i = -3; i <= 3; i += 0.2)
     {
         // try to predict different mathematical functions
         X.push_back({i});
@@ -65,7 +64,7 @@ int main()
     // auto Y_norm = ny.fit(Y);
 
     // args:- input, output, epochs
-    n.train(X, Y, 5000);
+    n.train(X, Y, 5000, Error::Huber);
 
     vector<vector<double>> tests = {
         {-3.14}, {-3.14/2}, {-3.14/3}, {-3.14/6}, {0},
@@ -76,7 +75,7 @@ int main()
 
     for (auto test: tests) {
         // double pred = ny.denorm(n.predict({nx.norm(test[0])})[0]->data);
-        double pred = n.predict(test)[0]->data;
+        double pred = n.predict(test)[0];
         cout << "sin(" << test[0] << ")" << " = " << pred << endl;
     }
 

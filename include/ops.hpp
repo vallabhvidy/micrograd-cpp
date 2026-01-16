@@ -7,9 +7,13 @@ Val operator*(Val a, Val b);
 Val operator-(Val a, Val b);
 Val operator/(Val a, Val b);
 
-Val tanh(Val a);
 Val exp(Val a);
-
-Val relu(Val a);
-Val sqrdiff(Val a, Val b);
 Val sin(Val a);
+Val log(Val a);
+
+Val tanh(Val a);
+Val relu(Val a);
+
+Val se(Val a, Val b);
+Val ae(Val a, Val b);
+Val huber(Val a, Val b);

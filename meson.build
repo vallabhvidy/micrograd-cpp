@@ -1,7 +1,7 @@
 project(
     'micrograd', 
     'cpp',
-    default_options : ['cpp_std=c++17'],
+    default_options : ['cpp_std=c++23'],
     version : '0.0.1'
 )
 
@@ -12,14 +12,15 @@ lib = library(
         'src/value.cpp',
         'src/ops.cpp',
         'src/nn.cpp',
-        'src/normalizer.cpp'
+        'src/normalizer.cpp',
+        'src/error.cpp'
     ],
     include_directories : inc,
 )
 
 executable(
     'micrograd', 
-    'test.cpp',
+    'multigram.cpp',
     include_directories : inc,
     link_with : lib,
 )
